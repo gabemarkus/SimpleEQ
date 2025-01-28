@@ -129,6 +129,7 @@ bool SimpleEQAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts)
 }
 #endif
 
+//THIS IS WHERE WE GET THE BLOCK OF AUDIO DATA IN THE FORM OF A BUFFER AND MIDI MESSAGES
 void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -150,6 +151,9 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // the samples and the outer loop is handling the channels.
     // Alternatively, you can process the samples with the channels
     // interleaved by keeping the same state.
+    
+    //THIS IS WHERE WE DO ALL OF THE AUDIO WORK
+    //WE ARE ITERATING OVER ALL THE CHANNELS IN THE EXTERIOR LOOP AND THE OVER THE SAMPLES IN THE INTERIOR LOOP
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer (channel);
@@ -166,7 +170,10 @@ bool SimpleEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* SimpleEQAudioProcessor::createEditor()
 {
-    return new SimpleEQAudioProcessorEditor (*this);
+    //return new SimpleEQAudioProcessorEditor (*this);
+    
+    //this allows us to see the plugin with parameters even without adding gui elements
+    return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -182,6 +189,51 @@ void SimpleEQAudioProcessor::setStateInformation (const void* data, int sizeInBy
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
 }
+
+//DECLARING THE AUDIOPROCESSORVALUETREESTATE PARAMETER LAYOUT
+//WE DECLARE THE PARAMETERS WE WILL USE IN HERE
+juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::createParameterLayout()
+{
+    //first we create the layout
+    juce::AudioProcessorValueTreeState::ParameterLayout layout;
+    //then we can add parameters to the layout
+    
+    //this one is a float parameter, we set the name, range, step size, skew amount if we want it, and default value
+    //these should be unique pointers so we use std::make_unique
+    //this parameter is for the lowcut filter
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("LowCutFreq", 1), "LowCut Freq", juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.), 20.f));
+    //this parameter is for the highcut filter
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("HiCutFreq", 1), "HiCut Freq",
+        juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.), 20000.f));
+    //this is for the peak EQ frequency
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakFreq", 1), "Peak Freq",
+        juce::NormalisableRange<float>(20.f, 20000.f, 1.f, 1.), 750.f));
+    //this is for peak EQ gain - the range will now be in DB rather than hz, .1db steps, default value 0
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakGain", 1), "Peak Gain", juce::NormalisableRange<float>(-24.f, 24.f, .1f, 1.), 0.f));
+    //this is for the Q of the peak EQ
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakQ", 1), "Q",
+        juce::NormalisableRange<float>(.1f, 10.f, .05f, 1.), 1.f));
+    
+    //our low and high cut bands will have 4 choices of steepness to their cutoff
+    //so we create a JUCE choice parameter which takes a string array with your choices
+    
+    //creating the string array of choices
+    juce::StringArray cutoffChoiceStringArray;
+    for (int i = 0; i < 4; i++)
+    {
+        juce::String str; //make a new string
+        str << (12 + i*12); //12, 24, 36, 48
+        str << " db/Oct"; //append with db/oct
+        cutoffChoiceStringArray.add(str); //add to array
+    }
+    
+    //creating the audioparameter choices
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("LowCutSlope", 1), "LowCut Slope", cutoffChoiceStringArray, 0));
+    layout.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID("HiCutSlope", 1), "HiCut Slope", cutoffChoiceStringArray, 0));
+    
+    return layout;
+}
+
 
 //==============================================================================
 // This creates new instances of the plugin..

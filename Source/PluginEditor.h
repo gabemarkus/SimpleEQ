@@ -6,6 +6,8 @@
   ==============================================================================
 */
 
+//THIS IS WHERE WE SET UP THE PLUGIN'S GUI AND VISUALS
+
 #pragma once
 
 #include <JuceHeader.h>
