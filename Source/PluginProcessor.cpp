@@ -95,6 +95,20 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
 {
     // Use this method as the place to do any pre-playback
     // initialisation that you need..
+    
+    //we need to create a ProcessSpec to tell our chain how it will process audio
+    
+    juce::dsp::ProcessSpec spec;
+    spec.maximumBlockSize = samplesPerBlock; //how many samples per block/ how many it will process at once
+    spec.numChannels = 1; //how many channels to process
+    spec.sampleRate = sampleRate; //sample rate
+    
+    //now we pass this spec to each chain
+    leftChain.prepare(spec);
+    rightChain.prepare(spec);
+    
+    //now that the chains are prepared we go to processblock
+    
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -139,27 +153,25 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     // In case we have more outputs than inputs, this code clears any output
     // channels that didn't contain input data, (because these aren't
     // guaranteed to be empty - they may contain garbage).
-    // This is here to avoid people getting screaming feedback
-    // when they first compile a plugin, but obviously you don't need to keep
-    // this code if your algorithm always overwrites all the output channels.
+    
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-
-    // This is the place where you'd normally do the guts of your plugin's
-    // audio processing...
-    // Make sure to reset the state if your inner loop is processing
-    // the samples and the outer loop is handling the channels.
-    // Alternatively, you can process the samples with the channels
-    // interleaved by keeping the same state.
+            
+    //the processorchain requires a processing context to run audio through the chain
+    //we need to extract left channel and right channel from the block given from the DAW
     
-    //THIS IS WHERE WE DO ALL OF THE AUDIO WORK
-    //WE ARE ITERATING OVER ALL THE CHANNELS IN THE EXTERIOR LOOP AND THE OVER THE SAMPLES IN THE INTERIOR LOOP
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
-    {
-        auto* channelData = buffer.getWritePointer (channel);
-
-        // ..do something to the data...
-    }
+    //initializing a block with our buffer
+    juce::dsp::AudioBlock<float> block(buffer);
+    //now we extract individual channels
+    auto leftBlock = block.getSingleChannelBlock(0);
+    auto rightBlock = block.getSingleChannelBlock(1);
+    //now we can create processing contexts for each channel's blocks
+    juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
+    juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
+    //now we can pass these contexts to our processing chains
+    leftChain.process(leftContext);
+    rightChain.process(rightContext);
+    //now audio is running through our chains and being processed, but we have not yet set up filter params
 }
 
 //==============================================================================

@@ -74,7 +74,23 @@ public:
     //declaring audio processor value tree state
     juce::AudioProcessorValueTreeState apvts {*this, nullptr, "Parameters", createParameterLayout()};
     
+    //most of the dsp modules process in mono so we will have a lot of duplicates
+    //so we will create some type aliases to eliminate some namespace and type definitions
+    
     private:
+    //each filter type in IIR filter class has a response of 12db, so if we want a 48db slope we need 4 filters
+    //so we set up a chain and process context which will run through each element of the chain automatically
+    using Filter = juce::dsp::IIR::Filter<float>;
+    using CutFilter = juce::dsp::ProcessorChain<Filter, Filter, Filter, Filter>;
+    
+    //now we link together our cutfilters and filter to create the entire mono processing chain : Lowpass filter, peak EQ, Hipass filter
+    
+    using MonoChain = juce::dsp::ProcessorChain<CutFilter, Filter, CutFilter>;
+    
+    //declare left and right chains
+    MonoChain leftChain, rightChain;
+    //now we need to prepare our chain to play so we go to prepareToPlay in .cpp
+    
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
 };
