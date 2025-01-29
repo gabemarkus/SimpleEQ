@@ -10,6 +10,17 @@
 
 #include <JuceHeader.h>
 
+//struct for all of our parameters
+struct ChainSettings
+{
+    float peakFreq {0}, peakGainInDb{0}, peakQuality {.1f};
+    float lowCutFreq{0}, highCutFreq{0};
+    int lowCutSlope{0}, highCutSlope {0};
+};
+//now declaring a function to get these values, implemented in .cpp
+ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
+
+//
 //==============================================================================
 /**
 */
@@ -90,6 +101,13 @@ public:
     //declare left and right chains
     MonoChain leftChain, rightChain;
     //now we need to prepare our chain to play so we go to prepareToPlay in .cpp
+    
+    //we create an enum to represent each link's position in the chain to make it easier
+    enum ChainPositions{
+        LowCut,
+        Peak,
+        HighCut
+    };
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)
