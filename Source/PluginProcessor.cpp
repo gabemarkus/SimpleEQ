@@ -107,7 +107,7 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     leftChain.prepare(spec);
     rightChain.prepare(spec);
     
-    //creating filter coefficients
+    //creating peak filter coefficients
     auto chainSettings = getChainSettings(apvts);
     auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDb));
     
@@ -116,6 +116,107 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     
     //at this point the peak filter could make changes to the audio but as we have not yet set up our sliders nothing will change
     //we do that in processblock
+    
+    //now we create our lowcut filter coefficient
+    //last argument = order aka how many 12db filters it will create
+    //for some reason it creates one filter for every 2 orders
+    //since we want 12/24/36/48db slopes we need max 8 orders
+    //so we pass 2*(lowcutslope+1) to order (0->2, 1->4, 2->6, 3->8)
+    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, 2*(chainSettings.lowCutSlope + 1));
+    
+    //set up lowcut filter
+    //remember we need to split channels
+    //left chain first
+    auto &leftLowCut = leftChain.get<ChainPositions::LowCut>();
+    //we need to bypass all the links in the chain first
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+    //now we can switch between slopes with a switch case
+    switch (chainSettings.lowCutSlope)
+    {
+        case Slope_12:
+            //assign coefficient to first filter
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            //stop bypassing first filter
+            leftLowCut.setBypassed<0>(false);
+            //etc
+            break;
+        case Slope_24:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            break;
+        case Slope_36:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<2>(false);
+            break;
+        case Slope_48:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<2>(false);
+            *leftLowCut.get<3>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<3>(false);
+            break;
+        default:
+            break;
+    }
+    
+    //repeat for right chain
+    
+    auto &rightLowCut = rightChain.get<ChainPositions::LowCut>();
+    //we need to bypass all the links in the chain first
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+    //now we can switch between slopes with a switch case
+    switch (chainSettings.lowCutSlope)
+    {
+        case Slope_12:
+            //assign coefficient to first filter
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            //stop bypassing first filter
+            rightLowCut.setBypassed<0>(false);
+            //etc
+            break;
+        case Slope_24:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            break;
+        case Slope_36:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<2>(false);
+            break;
+        case Slope_48:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<2>(false);
+            *rightLowCut.get<3>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<3>(false);
+            break;
+        default:
+            break;
+    }
+    
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -168,6 +269,101 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     
     *leftChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
     *rightChain.get<ChainPositions::Peak>().coefficients = *peakCoefficients;
+    
+    auto cutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), 2*(chainSettings.lowCutSlope + 1));
+    
+    //set up lowcut filter
+    //remember we need to split channels
+    //left chain first
+    auto &leftLowCut = leftChain.get<ChainPositions::LowCut>();
+    //we need to bypass all the links in the chain first
+    leftLowCut.setBypassed<0>(true);
+    leftLowCut.setBypassed<1>(true);
+    leftLowCut.setBypassed<2>(true);
+    leftLowCut.setBypassed<3>(true);
+    //now we can switch between slopes with a switch case
+    switch (chainSettings.lowCutSlope)
+    {
+        case Slope_12:
+            //assign coefficient to first filter
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            //stop bypassing first filter
+            leftLowCut.setBypassed<0>(false);
+            //etc
+            break;
+        case Slope_24:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            break;
+        case Slope_36:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<2>(false);
+            break;
+        case Slope_48:
+            *leftLowCut.get<0>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<0>(false);
+            *leftLowCut.get<1>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<1>(false);
+            *leftLowCut.get<2>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<2>(false);
+            *leftLowCut.get<3>().coefficients = *cutCoefficients[0];
+            leftLowCut.setBypassed<3>(false);
+            break;
+        default:
+            break;
+    }
+    
+    //repeat for right chain
+    
+    auto &rightLowCut = rightChain.get<ChainPositions::LowCut>();
+    //we need to bypass all the links in the chain first
+    rightLowCut.setBypassed<0>(true);
+    rightLowCut.setBypassed<1>(true);
+    rightLowCut.setBypassed<2>(true);
+    rightLowCut.setBypassed<3>(true);
+    //now we can switch between slopes with a switch case
+    switch (chainSettings.lowCutSlope)
+    {
+        case Slope_12:
+            //assign coefficient to first filter
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            //stop bypassing first filter
+            rightLowCut.setBypassed<0>(false);
+            //etc
+            break;
+        case Slope_24:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            break;
+        case Slope_36:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<2>(false);
+            break;
+        case Slope_48:
+            *rightLowCut.get<0>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<0>(false);
+            *rightLowCut.get<1>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<1>(false);
+            *rightLowCut.get<2>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<2>(false);
+            *rightLowCut.get<3>().coefficients = *cutCoefficients[0];
+            rightLowCut.setBypassed<3>(false);
+            break;
+        default:
+            break;
+    }
     
     
     //the processorchain requires a processing context to run audio through the chain
@@ -225,8 +421,8 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     settings.peakFreq = apvts.getRawParameterValue("PeakFreq")->load();
     settings.peakGainInDb = apvts.getRawParameterValue("PeakGain")->load();
     settings.peakQuality = apvts.getRawParameterValue("PeakQ")->load();
-    settings.lowCutSlope = apvts.getRawParameterValue("LowCutSlope")->load();
-    settings.highCutSlope = apvts.getRawParameterValue("HiCutSlope")->load();
+    settings.lowCutSlope = static_cast<Slope>(apvts.getRawParameterValue("LowCutSlope")->load());
+    settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HiCutSlope")->load());
     
     return settings;
     

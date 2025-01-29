@@ -10,12 +10,20 @@
 
 #include <JuceHeader.h>
 
+//enum for hi/low pass slope options
+enum Slope{
+    Slope_12,
+    Slope_24,
+    Slope_36,
+    Slope_48
+};
+
 //struct for all of our parameters
 struct ChainSettings
 {
     float peakFreq {0}, peakGainInDb{0}, peakQuality {.1f};
     float lowCutFreq{0}, highCutFreq{0};
-    int lowCutSlope{0}, highCutSlope {0};
+    int lowCutSlope{Slope::Slope_12}, highCutSlope {Slope::Slope_12};
 };
 //now declaring a function to get these values, implemented in .cpp
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
