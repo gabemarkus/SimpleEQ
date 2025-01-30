@@ -67,6 +67,8 @@ private:
     
     //making vector to iterate through knobs
     std::vector<juce::Component*> GetComps();
+    
+    MonoChain monochain;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
