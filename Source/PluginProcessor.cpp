@@ -230,15 +230,20 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     //now that we have these settings we can create our filters' coefficients in preparetoplay
 }
 
+Coefficients makePeakFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDb));
+}
+
 void SimpleEQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
 {
-    auto peakCoefficients = juce::dsp::IIR::Coefficients<float>::makePeakFilter(getSampleRate(), chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDb));
+    auto peakCoefficients = makePeakFilter(chainSettings, getSampleRate());
     
     UpdateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
     UpdateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
 }
 
-void SimpleEQAudioProcessor::UpdateCoefficients(Coefficients &old, const Coefficients &replacement)
+void UpdateCoefficients(Coefficients &old, const Coefficients &replacement)
 {
     *old = *replacement;
 }

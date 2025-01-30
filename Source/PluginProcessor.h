@@ -46,6 +46,12 @@ enum ChainPositions{
     HighCut
 };
 
+//creating helper function to update filter coefficients
+using Coefficients = Filter::CoefficientsPtr;
+void UpdateCoefficients(Coefficients& old, const Coefficients& replacement);
+
+Coefficients MakePeakFilter(const ChainSettings& chainSettings, double sampleRate);
+
 //
 //==============================================================================
 /**
@@ -121,10 +127,6 @@ public:
     //refactoring
     
     void UpdatePeakFilter(const ChainSettings& chainSettings);
-    
-    //creating helper function to update filter coefficients
-    using Coefficients = Filter::CoefficientsPtr;
-    static void UpdateCoefficients(Coefficients& old, const Coefficients& replacement);
     
     //creating helper function + template to simplify code in slope switch case
     template<int Index, typename ChainType, typename CoefficientType>
