@@ -152,9 +152,9 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
 
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
-    ///
     
-
+    //
+    
     UpdateAllFilters();
     
     //the processorchain requires a processing context to run audio through the chain
@@ -170,8 +170,6 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     //now we can pass these contexts to our processing chains
     leftChain.process(leftContext);
     rightChain.process(rightContext);
-    //now audio is running through our chains and being processed, but we have not yet set up filter params
-    //we're goint to set up the parameters starting at the top of .h with a struct to stay organized
 }
 
 //==============================================================================
@@ -182,10 +180,10 @@ bool SimpleEQAudioProcessor::hasEditor() const
 
 juce::AudioProcessorEditor* SimpleEQAudioProcessor::createEditor()
 {
-    //return new SimpleEQAudioProcessorEditor (*this);
+    return new SimpleEQAudioProcessorEditor (*this);
     
     //this allows us to see the plugin with parameters even without adding gui elements
-    return new juce::GenericAudioProcessorEditor(*this);
+    //return new juce::GenericAudioProcessorEditor(*this);
 }
 
 //==============================================================================
@@ -194,12 +192,24 @@ void SimpleEQAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
     // You should use this method to store your parameters in the memory block.
     // You could do that either as raw data, or use the XML or ValueTree classes
     // as intermediaries to make it easy to save and load complex data.
+    
+    //we are creating a way to save parameters when opening and closing the plugin
+    juce::MemoryOutputStream memoryOutputStream (destData, true);
+    apvts.state.writeToStream(memoryOutputStream);
 }
 
 void SimpleEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     // You should use this method to restore your parameters from this memory block,
     // whose contents will have been created by the getStateInformation() call.
+    
+    //here we restore the saved parameters from memory
+    auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+    if(tree.isValid())
+    {
+        apvts.replaceState(tree);
+        UpdateAllFilters();
+    }
 }
 
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)

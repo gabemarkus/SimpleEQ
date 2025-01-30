@@ -13,6 +13,16 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 
+//creating a struct for creating knobs because they will all be the same
+struct CustomRotarySlider : juce::Slider
+{
+    CustomRotarySlider() : juce::Slider(juce::Slider::SliderStyle::RotaryHorizontalVerticalDrag,
+                                        juce::Slider::TextEntryBoxPosition::NoTextBox)
+    {
+        
+    }
+};
+
 //==============================================================================
 /**
 */
@@ -30,6 +40,17 @@ private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     SimpleEQAudioProcessor& audioProcessor;
+    
+    CustomRotarySlider peakFreqSlider,
+    peakGainSlider,
+    peakQualitySlider,
+    lowCutFreqSlider,
+    highCutFreqSlider,
+    lowCutSlopeSlider,
+    highCutSlopeSlider;
+    
+    //making vector to iterate through knobs
+    std::vector<juce::Component*> GetComps();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
