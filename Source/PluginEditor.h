@@ -49,6 +49,22 @@ private:
     lowCutSlopeSlider,
     highCutSlopeSlider;
     
+    //now we attach our parameters to the knobs
+    //the function to do is is very long so we create a typename alias to make it more readable
+    
+    using apvts = juce::AudioProcessorValueTreeState;
+    using Attachment = apvts::SliderAttachment;
+    
+    //now we create the attachments
+    Attachment peakFreqSliderAttachment,
+    peakGainSliderAttachment,
+    peakQualitySliderAttachment,
+    lowCutFreqSliderAttachment,
+    lowCutSlopeSliderAttachment,
+    highCutFreqSliderAttachment,
+    highCutSlopeSliderAttachment;
+    
+    
     //making vector to iterate through knobs
     std::vector<juce::Component*> GetComps();
 
