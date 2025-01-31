@@ -9,6 +9,64 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+void LookAndFeel::drawRotarySlider(juce::Graphics &g,
+                                   int x,
+                                   int y,
+                                   int width,
+                                   int height,
+                                   float sliderPosProportional,
+                                   float rotaryStartAngle,
+                                   float rotaryEndAngle,
+                                   juce::Slider &slider)
+{
+    using namespace juce;
+    auto bounds = Rectangle<float>(x, y, width, height);
+    g.setColour(Colour(97u, 18u, 167u));
+    g.fillEllipse(bounds);
+    
+    g.setColour(Colour(155u, 15u, 155u));
+    g.drawEllipse(bounds, 1.f);
+    
+    auto center = bounds.getCentre();
+    
+    Path p;
+    Rectangle<float> r;
+    r.setLeft(center.getX() - 2);
+    r.setRight(center.getX() + 2);
+    r.setTop(bounds.getY());
+    r.setBottom(center.getY());
+    p.addRectangle(r);
+    
+    jassert(rotaryStartAngle < rotaryEndAngle);
+    auto sliderAngRad = jmap(sliderPosProportional, 0.f, 1.f, rotaryStartAngle, rotaryEndAngle);
+    p.applyTransform(AffineTransform().rotation(sliderAngRad, center.getX(), center.getY()));
+    g.fillPath(p);
+    
+}
+
+void KnobWithText::paint(juce::Graphics &g)
+{
+    using namespace juce;
+    auto startAngle = degreesToRadians(180.f + 45.f);
+    auto endAngle = degreesToRadians(180.f - 45.f) + MathConstants<float>::twoPi;
+    auto range = getRange();
+    auto knobBounds = getSliderBounds();
+    getLookAndFeel().drawRotarySlider(g,
+                                      knobBounds.getX(),
+                                      knobBounds.getY(),
+                                      knobBounds.getWidth(),
+                                      knobBounds.getHeight(),
+                                      jmap(getValue(), range.getStart(), range.getEnd(), 0.0, 1.0),
+                                      startAngle,
+                                      endAngle,
+                                      *this);
+}
+
+juce::Rectangle<int> KnobWithText::getSliderBounds() const
+{
+    return getLocalBounds();
+}
+//==============================================================================
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
 {
     const auto& params = audioProcessor.getParameters();
