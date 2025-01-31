@@ -51,6 +51,12 @@ void KnobWithText::paint(juce::Graphics &g)
     auto endAngle = degreesToRadians(180.f - 45.f) + MathConstants<float>::twoPi;
     auto range = getRange();
     auto knobBounds = getSliderBounds();
+    
+    g.setColour(Colours::red);
+    g.drawRect(getLocalBounds());
+    g.setColour(Colours::yellow);
+    g.drawRect(getSliderBounds());
+    
     getLookAndFeel().drawRotarySlider(g,
                                       knobBounds.getX(),
                                       knobBounds.getY(),
@@ -64,7 +70,16 @@ void KnobWithText::paint(juce::Graphics &g)
 
 juce::Rectangle<int> KnobWithText::getSliderBounds() const
 {
-    return getLocalBounds();
+    auto bounds = getLocalBounds();
+    auto size = juce::jmin(bounds.getWidth(), bounds.getHeight());
+    size -= getTextHeight() * 2;
+    juce::Rectangle<int> r;
+    r.setSize(size, size);
+    r.setCentre(bounds.getCentreX(), 0);
+    r.setY(2);
+    
+    return r;
+    
 }
 //==============================================================================
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
