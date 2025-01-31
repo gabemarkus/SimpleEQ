@@ -23,20 +23,27 @@ struct CustomRotarySlider : juce::Slider
     }
 };
 
-struct ResponseCurveComponent: juce::Component(),
-juce::AudioProcessorParameter::Listener,
-juce::Timer
+struct ResponseCurveComponent: juce::Component, juce::AudioProcessorParameter::Listener, juce::Timer
 {
+    ResponseCurveComponent(SimpleEQAudioProcessor&);
+    ~ResponseCurveComponent();
     
-}
+    void parameterValueChanged(int parameterIndex, float newValue) override;
+    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {};
+    //we need a timer to determine how often to check that the parameters change
+    void timerCallback() override;
+    void paint(juce::Graphics& g) override;
+    
+    private:
+    SimpleEQAudioProcessor& audioProcessor;
+    juce::Atomic<bool> parametersChanged {false};
+    MonoChain monochain;
+};
 
 //==============================================================================
 /**
 */
-class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor,
-juce::AudioProcessorParameter::Listener,
-juce::Timer
-
+class SimpleEQAudioProcessorEditor  : public juce::AudioProcessorEditor
 {
 public:
     SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor&);
@@ -45,22 +52,12 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
-    
-    //we are overriding callbacks to check when the parameter value is changed
-    //that way we can redraw the curve every time a parameter changes rather than every frame
-    //because that would be very expensive
-    void parameterValueChanged(int parameterIndex, float newValue) override;
-    void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {};
-    //we need a timer to determine how often to check that the parameters change
-    void timerCallback() override;
 
 private:
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     SimpleEQAudioProcessor& audioProcessor;
-    
-    juce::Atomic<bool> parametersChanged {false};
-    
+
     CustomRotarySlider peakFreqSlider,
     peakGainSlider,
     peakQualitySlider,
@@ -68,6 +65,8 @@ private:
     highCutFreqSlider,
     lowCutSlopeSlider,
     highCutSlopeSlider;
+    
+    ResponseCurveComponent responseCurveComponent;
     
     //now we attach our parameters to the knobs
     //the function to do is is very long so we create a typename alias to make it more readable
@@ -84,11 +83,8 @@ private:
     highCutFreqSliderAttachment,
     highCutSlopeSliderAttachment;
     
-    
     //making vector to iterate through knobs
     std::vector<juce::Component*> GetComps();
     
-    MonoChain monochain;
-
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
