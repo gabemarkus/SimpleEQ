@@ -31,11 +31,24 @@ highCutSlopeSliderAttachment(audioProcessor.apvts, "HiCutSlope", highCutSlopeSli
         addAndMakeVisible(comp);
     }
     
+    const auto& params = audioProcessor.getParameters();
+    for (auto param : params)
+    {
+        param->addListener(this);
+    }
     setSize (600, 400);
+    
+    //starting the timer to check for param changes (60fps)
+    startTimerHz(60);
 }
 
 SimpleEQAudioProcessorEditor::~SimpleEQAudioProcessorEditor()
 {
+    const auto& params = audioProcessor.getParameters();
+    for (auto param : params)
+    {
+        param->removeListener(this);
+    }
 }
 
 //==============================================================================
@@ -62,7 +75,7 @@ void SimpleEQAudioProcessorEditor::paint (juce::Graphics& g)
     std::vector<double> magnitudes;
     //changing the size of the vector to the width of the response curve display (1 pixel = 1 magnitude)
     magnitudes.resize(w);
-    //iterate through each pixel and calculate magnitude at that frequency
+    //iterate through each element of the vector and calculate magnitude at that frequency
     for (int i = 0; i < w; i++)
     {
         //we need a starting gain of 1
@@ -175,7 +188,18 @@ void SimpleEQAudioProcessorEditor::timerCallback()
     {
         //if the parameters have changed then we change the curve
         //update the monochain
+        auto chainSettings = getChainSettings(audioProcessor.apvts);
+        auto peakCoefficients = MakePeakFilter(chainSettings, audioProcessor.getSampleRate());
+        UpdateCoefficients(monochain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+        
+        auto lowCutCoefficients = MakeLowCutFilter(chainSettings, audioProcessor.getSampleRate());
+        auto highCutCoefficients = MakeHighCutFilter(chainSettings, audioProcessor.getSampleRate());
+        
+        UpdateCutFilter(monochain.get<ChainPositions::LowCut>(), lowCutCoefficients, static_cast<Slope>(chainSettings.lowCutSlope));
+        UpdateCutFilter(monochain.get<ChainPositions::HighCut>(), highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));
+        
         //signal a repaint
+        repaint();
     }
 }
 

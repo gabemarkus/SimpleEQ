@@ -189,20 +189,13 @@ juce::AudioProcessorEditor* SimpleEQAudioProcessor::createEditor()
 //==============================================================================
 void SimpleEQAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-    
     //we are creating a way to save parameters when opening and closing the plugin
     juce::MemoryOutputStream memoryOutputStream (destData, true);
     apvts.state.writeToStream(memoryOutputStream);
 }
 
 void SimpleEQAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-    
+{  
     //here we restore the saved parameters from memory
     auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
     if(tree.isValid())
@@ -230,14 +223,14 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     //now that we have these settings we can create our filters' coefficients in preparetoplay
 }
 
-Coefficients makePeakFilter(const ChainSettings& chainSettings, double sampleRate)
+Coefficients MakePeakFilter(const ChainSettings& chainSettings, double sampleRate)
 {
     return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDb));
 }
 
 void SimpleEQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
 {
-    auto peakCoefficients = makePeakFilter(chainSettings, getSampleRate());
+    auto peakCoefficients = MakePeakFilter(chainSettings, getSampleRate());
     
     UpdateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
     UpdateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
@@ -250,13 +243,7 @@ void UpdateCoefficients(Coefficients &old, const Coefficients &replacement)
 
 void SimpleEQAudioProcessor::UpdateLowCutFilters(const ChainSettings &chainSettings)
 {
-    //now we create our lowcut filter coefficients
-    //last argument = order aka how many 12db filters it will create
-    //for some reason it creates one filter for every 2 orders
-    //since we want 12/24/36/48db slopes we need max 8 orders
-    //so we pass 2*(lowcutslope+1) to order (0->2, 1->4, 2->6, 3->8)
-    auto lowCutCoefficients = juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, getSampleRate(), 2*(chainSettings.lowCutSlope + 1));
-    
+    auto lowCutCoefficients = MakeLowCutFilter(chainSettings, getSampleRate());
     //set up lowcut filter
     //remember we need to split channels
     //left chain first
@@ -272,7 +259,7 @@ void SimpleEQAudioProcessor::UpdateLowCutFilters(const ChainSettings &chainSetti
 void SimpleEQAudioProcessor::UpdateHighCutFilters(const ChainSettings &chainSettings)
 {
     //now we create our highcut filter coefficients
-    auto highCutCoefficients = juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq, getSampleRate(), 2*(chainSettings.lowCutSlope + 1));
+    auto highCutCoefficients = MakeHighCutFilter(chainSettings, getSampleRate());
     auto &leftHighCut = leftChain.get<ChainPositions::HighCut>();
     auto &rightHighCut = rightChain.get<ChainPositions::HighCut>();
     UpdateCutFilter(leftHighCut, highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));

@@ -52,6 +52,65 @@ void UpdateCoefficients(Coefficients& old, const Coefficients& replacement);
 
 Coefficients MakePeakFilter(const ChainSettings& chainSettings, double sampleRate);
 
+//creating helper function + template to simplify code in slope switch case
+template<int Index, typename ChainType, typename CoefficientType>
+void UpdateChain(ChainType& chain, const CoefficientType& cutCoefficients)
+{
+    UpdateCoefficients(chain.template get<Index>().coefficients, cutCoefficients[Index]);
+    chain.template setBypassed<Index>(false);
+}
+
+//creating helper function to update hi/locut filter
+//templates allow you to pass any type of variable and it will interpret it the same
+template<typename ChainType, typename CoefficientType>
+void UpdateCutFilter(ChainType& cutChain, const CoefficientType& cutCoefficients, const Slope& lowCutSlope)
+{
+    //we need to bypass all the links in the chain first
+    cutChain.template setBypassed<0>(true);
+    cutChain.template setBypassed<1>(true);
+    cutChain.template setBypassed<2>(true);
+    cutChain.template setBypassed<3>(true);
+    //now we can switch between slopes with a switch case
+    //note that we are not breaking between switch cases and that we are going in reverse order (48->12)
+    //this is so that if the slope is 48, all the other cases also occur - all the filters will be activated
+    //and if the slope is 12, only the 12 case will be used
+    switch (lowCutSlope)
+    {
+        case Slope_48:
+        {
+            UpdateChain<3>(cutChain, cutCoefficients);
+        }
+        case Slope_36:
+        {
+            UpdateChain<2>(cutChain, cutCoefficients);
+        }
+        case Slope_24:
+        {
+            UpdateChain<1>(cutChain, cutCoefficients);
+        }
+        case Slope_12:
+        {
+            UpdateChain<0>(cutChain, cutCoefficients);
+        }
+    }
+}
+
+inline auto MakeLowCutFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    //now we create our lowcut filter coefficients
+    //last argument = order aka how many 12db filters it will create
+    //for some reason it creates one filter for every 2 orders
+    //since we want 12/24/36/48db slopes we need max 8 orders
+    //so we pass 2*(lowcutslope+1) to order (0->2, 1->4, 2->6, 3->8)
+    return juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, 2*(chainSettings.lowCutSlope + 1));
+}
+
+
+inline auto MakeHighCutFilter(const ChainSettings& chainSettings, double sampleRate)
+{
+    return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq, sampleRate, 2*(chainSettings.highCutSlope + 1));
+}
+
 //
 //==============================================================================
 /**
@@ -127,49 +186,6 @@ public:
     //refactoring
     
     void UpdatePeakFilter(const ChainSettings& chainSettings);
-    
-    //creating helper function + template to simplify code in slope switch case
-    template<int Index, typename ChainType, typename CoefficientType>
-    void UpdateChain(ChainType& chain, const CoefficientType& cutCoefficients)
-    {
-        UpdateCoefficients(chain.template get<Index>().coefficients, cutCoefficients[Index]);
-        chain.template setBypassed<Index>(false);
-    }
-    
-    //creating helper function to update hi/locut filter
-    //templates allow you to pass any type of variable and it will interpret it the same
-    template<typename ChainType, typename CoefficientType>
-    void UpdateCutFilter(ChainType& cutChain, const CoefficientType& cutCoefficients, const Slope& lowCutSlope)
-    {
-        //we need to bypass all the links in the chain first
-        cutChain.template setBypassed<0>(true);
-        cutChain.template setBypassed<1>(true);
-        cutChain.template setBypassed<2>(true);
-        cutChain.template setBypassed<3>(true);
-        //now we can switch between slopes with a switch case
-        //note that we are not breaking between switch cases and that we are going in reverse order (48->12)
-        //this is so that if the slope is 48, all the other cases also occur - all the filters will be activated
-        //and if the slope is 12, only the 12 case will be used
-        switch (lowCutSlope)
-        {
-            case Slope_48:
-            {
-                UpdateChain<3>(cutChain, cutCoefficients);
-            }
-            case Slope_36:
-            {
-                UpdateChain<2>(cutChain, cutCoefficients);
-            }
-            case Slope_24:
-            {
-                UpdateChain<1>(cutChain, cutCoefficients);
-            }
-            case Slope_12:
-            {
-                UpdateChain<0>(cutChain, cutCoefficients);
-            }
-        }
-    }
     
     void UpdateAllFilters();
     void UpdateLowCutFilters(const ChainSettings& chainSettings);

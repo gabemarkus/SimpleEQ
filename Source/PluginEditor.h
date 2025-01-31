@@ -23,6 +23,13 @@ struct CustomRotarySlider : juce::Slider
     }
 };
 
+struct ResponseCurveComponent: juce::Component(),
+juce::AudioProcessorParameter::Listener,
+juce::Timer
+{
+    
+}
+
 //==============================================================================
 /**
 */
@@ -39,8 +46,12 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     
+    //we are overriding callbacks to check when the parameter value is changed
+    //that way we can redraw the curve every time a parameter changes rather than every frame
+    //because that would be very expensive
     void parameterValueChanged(int parameterIndex, float newValue) override;
     void parameterGestureChanged(int parameterIndex, bool gestureIsStarting) override {};
+    //we need a timer to determine how often to check that the parameters change
     void timerCallback() override;
 
 private:
