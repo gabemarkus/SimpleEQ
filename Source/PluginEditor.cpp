@@ -52,8 +52,7 @@ void ResponseCurveComponent::timerCallback()
         
         //signal a repaint
         repaint();
-        
-        DBG("RESPONSECURVE EXISTS");
+    
     }
 }
 
@@ -151,15 +150,22 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
     g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
     g.setColour(Colours::white);
     g.strokePath(responseCurve, PathStrokeType(2.f));
-    
 }
-
 
 //==============================================================================
 SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p),
+
+peakFreqSlider(*audioProcessor.apvts.getParameter("PeakFreq"), "hz"),
+peakGainSlider(*audioProcessor.apvts.getParameter("PeakGain"), "db"),
+peakQualitySlider(*audioProcessor.apvts.getParameter("PeakQ"), "peakQualitySlider"),
+lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCutFreq"), "hz"),
+highCutFreqSlider(*audioProcessor.apvts.getParameter("HiCutFreq"), "hz"),
+lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCutSlope"), "db/oct"),
+highCutSlopeSlider(*audioProcessor.apvts.getParameter("HiCutSlope"), "db/oct"),
+
 responseCurveComponent(audioProcessor),
-//here we initialize our slider attachments
+
 peakFreqSliderAttachment(audioProcessor.apvts, "PeakFreq", peakFreqSlider),
 peakGainSliderAttachment(audioProcessor.apvts, "PeakGain", peakGainSlider),
 peakQualitySliderAttachment(audioProcessor.apvts, "PeakQ", peakQualitySlider),

@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #pragma once
 
 #include <JuceHeader.h>
@@ -25,6 +17,7 @@ struct ChainSettings
     float lowCutFreq{0}, highCutFreq{0};
     int lowCutSlope{Slope::Slope_12}, highCutSlope {Slope::Slope_12};
 };
+
 //now declaring a function to get these values, implemented in .cpp
 ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts);
 
@@ -105,16 +98,12 @@ inline auto MakeLowCutFilter(const ChainSettings& chainSettings, double sampleRa
     return juce::dsp::FilterDesign<float>::designIIRHighpassHighOrderButterworthMethod(chainSettings.lowCutFreq, sampleRate, 2*(chainSettings.lowCutSlope + 1));
 }
 
-
 inline auto MakeHighCutFilter(const ChainSettings& chainSettings, double sampleRate)
 {
     return juce::dsp::FilterDesign<float>::designIIRLowpassHighOrderButterworthMethod(chainSettings.highCutFreq, sampleRate, 2*(chainSettings.highCutSlope + 1));
 }
 
-//
 //==============================================================================
-/**
-*/
 class SimpleEQAudioProcessor  : public juce::AudioProcessor
 {
 public:
@@ -137,7 +126,6 @@ public:
     //CALLED WHEN PLAYBACK BEGINS IN THE HOST
     //THE HOST SENDS AUDIO BUFFER AKA AUDIO SAMPLES AND WE DO THE WORK ON THEM IN PROCESSBLOCK
     //THIS CANNOT BE INTERRUPTED - DO NOT ADD LATENCY AS THIS CAN CAUSE POPS AND CLICKS
-    //YOU MUST FIGURE OUT HOW TO GET THE WORK DONE IN THE TIME YOU ARE GIVEN
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 
     //==============================================================================
@@ -178,18 +166,14 @@ public:
     
     private:
 
-    
     //declare left and right chains
     MonoChain leftChain, rightChain;
-    //now we need to prepare our chain to play so we go to prepareToPlay in .cpp
     
     //refactoring
-    
     void UpdatePeakFilter(const ChainSettings& chainSettings);
-    
-    void UpdateAllFilters();
     void UpdateLowCutFilters(const ChainSettings& chainSettings);
     void UpdateHighCutFilters(const ChainSettings& chainSettings);
+    void UpdateAllFilters();
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessor)

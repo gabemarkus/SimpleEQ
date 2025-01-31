@@ -1,11 +1,3 @@
-/*
-  ==============================================================================
-
-    This file contains the basic framework code for a JUCE plugin processor.
-
-  ==============================================================================
-*/
-
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
@@ -93,13 +85,10 @@ void SimpleEQAudioProcessor::changeProgramName (int index, const juce::String& n
 //==============================================================================
 void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // Use this method as the place to do any pre-playback
-    // initialisation that you need..
-    
     //we need to create a ProcessSpec to tell our chain how it will process audio
     
     juce::dsp::ProcessSpec spec;
-    spec.maximumBlockSize = samplesPerBlock; //how many samples per block/ how many it will process at once
+    spec.maximumBlockSize = samplesPerBlock; //how many samples per block/how many it will process at once
     spec.numChannels = 1; //how many channels to process
     spec.sampleRate = sampleRate; //sample rate
     
@@ -108,7 +97,6 @@ void SimpleEQAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlo
     rightChain.prepare(spec);
     
     UpdateAllFilters();
-    
 }
 
 void SimpleEQAudioProcessor::releaseResources()
@@ -155,19 +143,20 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     
     //
     
+    //1. Update filter coefficients based on knob parameters
     UpdateAllFilters();
     
     //the processorchain requires a processing context to run audio through the chain
     //we need to extract left channel and right channel from the block given from the DAW
-    //initializing a block with our buffer
+    //2. Initializing a block with our buffer
     juce::dsp::AudioBlock<float> block(buffer);
-    //now we extract individual channels
+    //3. Extract individual channels from block
     auto leftBlock = block.getSingleChannelBlock(0);
     auto rightBlock = block.getSingleChannelBlock(1);
-    //now we can create processing contexts for each channel's blocks
+    //4. Create Processing Context for each channel
     juce::dsp::ProcessContextReplacing<float> leftContext(leftBlock);
     juce::dsp::ProcessContextReplacing<float> rightContext(rightBlock);
-    //now we can pass these contexts to our processing chains
+    //5. Process left and right hain
     leftChain.process(leftContext);
     rightChain.process(rightContext);
 }
@@ -219,21 +208,11 @@ ChainSettings getChainSettings(juce::AudioProcessorValueTreeState& apvts)
     settings.highCutSlope = static_cast<Slope>(apvts.getRawParameterValue("HiCutSlope")->load());
     
     return settings;
-    
-    //now that we have these settings we can create our filters' coefficients in preparetoplay
 }
 
 Coefficients MakePeakFilter(const ChainSettings& chainSettings, double sampleRate)
 {
     return juce::dsp::IIR::Coefficients<float>::makePeakFilter(sampleRate, chainSettings.peakFreq, chainSettings.peakQuality, juce::Decibels::decibelsToGain(chainSettings.peakGainInDb));
-}
-
-void SimpleEQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
-{
-    auto peakCoefficients = MakePeakFilter(chainSettings, getSampleRate());
-    
-    UpdateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
-    UpdateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
 }
 
 void UpdateCoefficients(Coefficients &old, const Coefficients &replacement)
@@ -244,26 +223,29 @@ void UpdateCoefficients(Coefficients &old, const Coefficients &replacement)
 void SimpleEQAudioProcessor::UpdateLowCutFilters(const ChainSettings &chainSettings)
 {
     auto lowCutCoefficients = MakeLowCutFilter(chainSettings, getSampleRate());
-    //set up lowcut filter
     //remember we need to split channels
     //left chain first
     auto &leftLowCut = leftChain.get<ChainPositions::LowCut>();
     UpdateCutFilter(leftLowCut, lowCutCoefficients, static_cast<Slope>(chainSettings.lowCutSlope));
-    
     //repeat for right chain
-    
     auto &rightLowCut = rightChain.get<ChainPositions::LowCut>();
     UpdateCutFilter(rightLowCut, lowCutCoefficients, static_cast<Slope>(chainSettings.lowCutSlope));
 }
 
 void SimpleEQAudioProcessor::UpdateHighCutFilters(const ChainSettings &chainSettings)
 {
-    //now we create our highcut filter coefficients
     auto highCutCoefficients = MakeHighCutFilter(chainSettings, getSampleRate());
     auto &leftHighCut = leftChain.get<ChainPositions::HighCut>();
     auto &rightHighCut = rightChain.get<ChainPositions::HighCut>();
     UpdateCutFilter(leftHighCut, highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));
     UpdateCutFilter(rightHighCut, highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));
+}
+
+void SimpleEQAudioProcessor::UpdatePeakFilter(const ChainSettings& chainSettings)
+{
+    auto peakCoefficients = MakePeakFilter(chainSettings, getSampleRate());
+    UpdateCoefficients(leftChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+    UpdateCoefficients(rightChain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
 }
 
 void SimpleEQAudioProcessor::UpdateAllFilters()
