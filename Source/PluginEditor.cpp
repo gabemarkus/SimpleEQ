@@ -96,7 +96,42 @@ juce::Rectangle<int> KnobWithText::getSliderBounds() const
 
 juce::String KnobWithText::getDisplayString() const
 {
-    return juce::String(juce::roundToInt(getValue()));
+    if(auto* choiceParam = dynamic_cast<juce::AudioParameterChoice*>(param))
+        return choiceParam->getCurrentChoiceName();
+    
+    juce::String string;
+    bool addK = false;
+    
+    if(auto* floatParam = dynamic_cast<juce::AudioParameterFloat*>(param))
+    {
+        float val = getValue();
+        if(val > 999.f)
+        {
+            val /= 1000.f;
+            addK = true;
+        }
+        string = juce::String(val, (addK ? 2 : 0));
+    }
+    else
+    {
+        jassertfalse;
+    }
+    
+    if(param->paramID == "PeakGain")
+        string = juce::String(getValue(), 2);
+    
+    if(suffix.isNotEmpty())
+    {
+        string << " ";
+        if( addK )
+        {
+            string << "k";
+        }
+        
+        string<<suffix;
+    }
+    
+    return string;
 }
 //==============================================================================
 ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audioProcessor(p)
@@ -248,7 +283,7 @@ SimpleEQAudioProcessorEditor::SimpleEQAudioProcessorEditor (SimpleEQAudioProcess
 
 peakFreqSlider(*audioProcessor.apvts.getParameter("PeakFreq"), "hz"),
 peakGainSlider(*audioProcessor.apvts.getParameter("PeakGain"), "db"),
-peakQualitySlider(*audioProcessor.apvts.getParameter("PeakQ"), "peakQualitySlider"),
+peakQualitySlider(*audioProcessor.apvts.getParameter("PeakQ"), ""),
 lowCutFreqSlider(*audioProcessor.apvts.getParameter("LowCutFreq"), "hz"),
 highCutFreqSlider(*audioProcessor.apvts.getParameter("HiCutFreq"), "hz"),
 lowCutSlopeSlider(*audioProcessor.apvts.getParameter("LowCutSlope"), "db/oct"),
