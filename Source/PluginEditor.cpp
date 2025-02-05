@@ -53,7 +53,6 @@ void LookAndFeel::drawRotarySlider(juce::Graphics &g,
         g.setColour(Colours::white);
         g.drawFittedText(text, r.toNearestInt(), juce::Justification::centred, 1);
     }
-    
 }
 
 void KnobWithText::paint(juce::Graphics &g)
@@ -64,10 +63,10 @@ void KnobWithText::paint(juce::Graphics &g)
     auto range = getRange();
     auto knobBounds = getSliderBounds();
     
-    g.setColour(Colours::red);
-    g.drawRect(getLocalBounds());
-    g.setColour(Colours::yellow);
-    g.drawRect(getSliderBounds());
+//    g.setColour(Colours::red);
+//    g.drawRect(getLocalBounds());
+//    g.setColour(Colours::yellow);
+//    g.drawRect(getSliderBounds());
     
     getLookAndFeel().drawRotarySlider(g,
                                       knobBounds.getX(),
@@ -78,6 +77,38 @@ void KnobWithText::paint(juce::Graphics &g)
                                       startAngle,
                                       endAngle,
                                       *this);
+    
+    auto center = getSliderBounds().toFloat().getCentre();
+    auto radius = getSliderBounds().getWidth() / 2;
+    g.setColour(Colour(0u, 170, 1u));
+    g.setFont(getTextHeight());
+    
+    //creating knob min/max value labels
+    auto numChoices = labels.size();
+    for (int i = 0; i < numChoices; i++)
+    {
+        auto pos = labels[i].position;
+        jassert(0<=pos);
+        jassert(pos<=1.f);
+        //get start and end knob angle
+        //pos = 0, startangle
+        //pos = 1, endangle
+        auto ang = jmap(pos, 0.f, 1.f, startAngle, endAngle);
+        //get a point on the circle at the angle at which we want to place text and adjust position
+        auto c = center.getPointOnCircumference(radius + getTextHeight() * .5 + 1, ang);
+        //create rectangle for text
+        Rectangle<float> r;
+        //get text for label
+        auto str = labels[i].label;
+        //resize rectangle to fit text
+        r.setSize(g.getCurrentFont().getStringWidth(str), getTextHeight());
+        //set the center of the text box
+        r.setCentre(c);
+        //set height of text box
+        r.setY(r.getY() + getTextHeight());
+        //draw text
+        g.drawFittedText(str, r.toNearestInt(), juce::Justification::centred, 1);
+    }
 }
 
 juce::Rectangle<int> KnobWithText::getSliderBounds() const
@@ -91,7 +122,6 @@ juce::Rectangle<int> KnobWithText::getSliderBounds() const
     r.setY(2);
     
     return r;
-    
 }
 
 juce::String KnobWithText::getDisplayString() const
@@ -141,6 +171,8 @@ ResponseCurveComponent::ResponseCurveComponent(SimpleEQAudioProcessor& p) : audi
     {
         param->addListener(this);
     }
+    
+    UpdateGraph();
     //starting the timer to check for param changes (60fps)
     startTimerHz(60);
 }
@@ -159,25 +191,29 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
     parametersChanged.set(true);
 }
 
+void ResponseCurveComponent::UpdateGraph() {
+    
+    auto chainSettings = getChainSettings(audioProcessor.apvts);
+    auto peakCoefficients = MakePeakFilter(chainSettings, audioProcessor.getSampleRate());
+    UpdateCoefficients(monochain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
+    
+    auto lowCutCoefficients = MakeLowCutFilter(chainSettings, audioProcessor.getSampleRate());
+    auto highCutCoefficients = MakeHighCutFilter(chainSettings, audioProcessor.getSampleRate());
+    
+    UpdateCutFilter(monochain.get<ChainPositions::LowCut>(), lowCutCoefficients, static_cast<Slope>(chainSettings.lowCutSlope));
+    UpdateCutFilter(monochain.get<ChainPositions::HighCut>(), highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));
+}
+
 void ResponseCurveComponent::timerCallback()
 {
     if(parametersChanged.compareAndSetBool(false, true))
     {
         //if the parameters have changed then we change the curve
         //update the monochain
-        auto chainSettings = getChainSettings(audioProcessor.apvts);
-        auto peakCoefficients = MakePeakFilter(chainSettings, audioProcessor.getSampleRate());
-        UpdateCoefficients(monochain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
-        
-        auto lowCutCoefficients = MakeLowCutFilter(chainSettings, audioProcessor.getSampleRate());
-        auto highCutCoefficients = MakeHighCutFilter(chainSettings, audioProcessor.getSampleRate());
-        
-        UpdateCutFilter(monochain.get<ChainPositions::LowCut>(), lowCutCoefficients, static_cast<Slope>(chainSettings.lowCutSlope));
-        UpdateCutFilter(monochain.get<ChainPositions::HighCut>(), highCutCoefficients, static_cast<Slope>(chainSettings.highCutSlope));
+        UpdateGraph();
         
         //signal a repaint
         repaint();
-    
     }
 }
 
@@ -303,6 +339,20 @@ highCutSlopeSliderAttachment(audioProcessor.apvts, "HiCutSlope", highCutSlopeSli
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
 
+    peakFreqSlider.labels.add({0.f, "20hz"});
+    peakFreqSlider.labels.add({1.f, "20khz"});
+    peakGainSlider.labels.add({0.f, "-12db"});
+    peakGainSlider.labels.add({1.f, "-12db"});
+    peakQualitySlider.labels.add({0.f, "Q"});
+    highCutFreqSlider.labels.add({0.f, "20hz"});
+    highCutFreqSlider.labels.add({1.f, "20khz"});
+    highCutSlopeSlider.labels.add({0.f, "12"});
+    highCutSlopeSlider.labels.add({1.f, "48"});
+    lowCutFreqSlider.labels.add({0.f, "20hz"});
+    lowCutFreqSlider.labels.add({1.f, "20khz"});
+    lowCutSlopeSlider.labels.add({0.f, "12"});
+    lowCutSlopeSlider.labels.add({1.f, "48"});
+    
     //making our components(knob, curve) appear
     for(auto* comp : GetComps())
     {
@@ -333,9 +383,11 @@ void SimpleEQAudioProcessorEditor::resized()
     
     //get bounds of window
     auto bounds = getLocalBounds();
+    float hRatio = 25.f/100.f; //JUCE_LIVE_CONSTANT(33) / 100.f;
     //removing area reserved for graph
-    auto responseArea = bounds.removeFromTop(bounds.getHeight() * .33f);
+    auto responseArea = bounds.removeFromTop(bounds.getHeight() * hRatio);
     responseCurveComponent.setBounds(responseArea);
+    bounds.removeFromTop(5);
     //creating area for lowcut knob
     auto lowCutArea = bounds.removeFromLeft(bounds.getWidth() * .33f);
     //half the remaining .66 for high cut knob

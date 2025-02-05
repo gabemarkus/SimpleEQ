@@ -151,7 +151,6 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    
     //OUR VARIABLES
     
     //THIS SETS UP THE AUDIO PROCESSOR'S VALUE TREE

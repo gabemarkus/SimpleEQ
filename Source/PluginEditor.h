@@ -39,6 +39,14 @@ struct KnobWithText : juce::Slider
         setLookAndFeel(nullptr);
     }
     
+    struct LabelPosition
+    {
+        float position;
+        juce::String label;
+    };
+    
+    juce::Array<LabelPosition> labels;
+    
     void paint(juce::Graphics& g) override;
     juce::Rectangle<int> getSliderBounds() const;
     int getTextHeight() const {return 14;}
@@ -60,6 +68,8 @@ struct ResponseCurveComponent: juce::Component, juce::AudioProcessorParameter::L
     //we need a timer to determine how often to check that the parameters change
     void timerCallback() override;
     void paint(juce::Graphics& g) override;
+    
+    void UpdateGraph();
     
     private:
     SimpleEQAudioProcessor& audioProcessor;

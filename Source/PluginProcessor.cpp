@@ -141,8 +141,6 @@ void SimpleEQAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juc
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
     
-    //
-    
     //1. Update filter coefficients based on knob parameters
     UpdateAllFilters();
     
