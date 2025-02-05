@@ -68,13 +68,18 @@ struct ResponseCurveComponent: juce::Component, juce::AudioProcessorParameter::L
     //we need a timer to determine how often to check that the parameters change
     void timerCallback() override;
     void paint(juce::Graphics& g) override;
-    
-    void UpdateGraph();
+    void resized() override;
     
     private:
     SimpleEQAudioProcessor& audioProcessor;
     juce::Atomic<bool> parametersChanged {false};
     MonoChain monochain;
+    
+    void UpdateGraph();
+    
+    juce::Image background;
+    juce::Rectangle<int> getRenderArea();
+    juce::Rectangle<int> getAnalysisArea();
 };
 
 //==============================================================================

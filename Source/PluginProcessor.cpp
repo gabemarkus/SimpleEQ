@@ -273,7 +273,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout SimpleEQAudioProcessor::crea
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakFreq", 1), "Peak Freq",
                                                            juce::NormalisableRange<float>(20.f, 20000.f, 1.f, .25f), 750.f));
     //this is for peak EQ gain - the range will now be in DB rather than hz, .1db steps, default value 0
-    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakGain", 1), "Peak Gain", juce::NormalisableRange<float>(-12.f, 12.f, .5f, 1.), 0.f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakGain", 1), "Peak Gain", juce::NormalisableRange<float>(-24.f, 24.f, .5f, 1.), 0.f));
     //this is for the Q of the peak EQ
     layout.add(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PeakQ", 1), "Q",
         juce::NormalisableRange<float>(.1f, 10.f, .05f, 1.), 1.f));

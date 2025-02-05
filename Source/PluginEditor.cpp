@@ -219,14 +219,15 @@ void ResponseCurveComponent::timerCallback()
 
 void ResponseCurveComponent::paint (juce::Graphics& g)
 {
-    DBG("RESPONSECURVE REPAINT");
-    
     using namespace juce;
     // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (Colours::black);
     
+    //drawing grid background
+    g.drawImage(background, getLocalBounds().toFloat());
+    
     //setting up to display response curve
-    auto responseArea = getLocalBounds();
+    auto responseArea = getAnalysisArea();
     auto w = responseArea.getWidth();
     
     //get chain elements
@@ -308,9 +309,77 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
     }
     
     g.setColour(Colours::orange);
-    g.drawRoundedRectangle(responseArea.toFloat(), 4.f, 1.f);
+    g.drawRoundedRectangle(getRenderArea().toFloat(), 4.f, 1.f);
     g.setColour(Colours::white);
     g.strokePath(responseCurve, PathStrokeType(2.f));
+}
+
+void ResponseCurveComponent::resized()
+{
+    using namespace juce;
+    background = Image(Image::PixelFormat::RGB, getWidth(), getHeight(), true);
+    Graphics g(background);
+    
+    Array<float> frequencies
+    {
+        20, 30, 40, 50, 100,
+        200, 300, 400, 500, 1000,
+        2000, 3000, 4000, 5000, 10000, 20000
+    };
+    
+    auto renderArea = getAnalysisArea();
+    auto left = renderArea.getX();
+    auto right = renderArea.getRight();
+    auto top = renderArea.getY();
+    auto bottom = renderArea.getBottom();
+    auto width = renderArea.getWidth();
+    
+    Array<float> xs;
+    for (auto f : frequencies)
+    {
+        auto normalisedX = mapFromLog10(f, 20.f, 20000.f);
+        xs.add(left + width * normalisedX);
+    }
+    
+    g.setColour(Colours::dimgrey);
+    for(auto x : xs)
+    {
+        g.drawVerticalLine(x, top, bottom);
+    }
+    
+    Array<float> gain
+    {
+        -12, -6, 0, 6, 12
+    };
+    
+    for (auto gDB : gain)
+    {
+        auto y = jmap(gDB, -12.f, 12.f, float(bottom), float(top));
+        g.setColour(gDB == 0.f ? (Colour(0u, 170, 1u)) : Colours::darkgrey);
+        g.drawHorizontalLine(y, left, right);
+    }
+    
+    //g.drawRect(getAnalysisArea());
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getRenderArea()
+{
+    auto bounds = getLocalBounds();
+    //bounds.reduce(4, 4);
+    bounds.removeFromTop(12);
+    bounds.removeFromBottom(2);
+    bounds.removeFromLeft(20);
+    bounds.removeFromRight(20);
+    
+    return bounds;
+}
+
+juce::Rectangle<int> ResponseCurveComponent::getAnalysisArea()
+{
+    auto bounds = getRenderArea();
+    bounds.removeFromTop(4);
+    bounds.removeFromBottom(4);
+    return bounds;
 }
 
 //==============================================================================
