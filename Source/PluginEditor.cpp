@@ -322,9 +322,9 @@ void ResponseCurveComponent::resized()
     
     Array<float> frequencies
     {
-        20, 30, 40, 50, 100,
-        200, 300, 400, 500, 1000,
-        2000, 3000, 4000, 5000, 10000, 20000
+        20, 50, 100,
+        200, 500, 1000,
+        2000, 5000, 10000, 20000
     };
     
     auto renderArea = getAnalysisArea();
@@ -360,6 +360,34 @@ void ResponseCurveComponent::resized()
     }
     
     //g.drawRect(getAnalysisArea());
+    
+    g.setColour(Colours::lightgrey);
+    const int fontHeight = 10;
+    g.setFont(fontHeight);
+    for (int i = 0; i < frequencies.size(); i++)
+    {
+        auto f = frequencies[i];
+        auto x = xs[i];
+        bool addK = false;
+        String str;
+        if(f > 999.f)
+        {
+            addK = true;
+            f /= 1000.f;
+        }
+        
+        str << f;
+        if(addK) str << "k";
+        str << "hz";
+        
+        auto textWidth = g.getCurrentFont().getStringWidth(str);
+        Rectangle<int> r;
+        r.setSize(textWidth, fontHeight);
+        r.setCentre(x, 0);
+        r.setY(1);
+        
+        g.drawFittedText(str, r, juce::Justification::centred, 1);
+    }
 }
 
 juce::Rectangle<int> ResponseCurveComponent::getRenderArea()
@@ -410,8 +438,8 @@ highCutSlopeSliderAttachment(audioProcessor.apvts, "HiCutSlope", highCutSlopeSli
 
     peakFreqSlider.labels.add({0.f, "20hz"});
     peakFreqSlider.labels.add({1.f, "20khz"});
-    peakGainSlider.labels.add({0.f, "-12db"});
-    peakGainSlider.labels.add({1.f, "-12db"});
+    peakGainSlider.labels.add({0.f, "-24db"});
+    peakGainSlider.labels.add({1.f, "24db"});
     peakQualitySlider.labels.add({0.f, "Q"});
     highCutFreqSlider.labels.add({0.f, "20hz"});
     highCutFreqSlider.labels.add({1.f, "20khz"});
