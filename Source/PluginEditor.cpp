@@ -157,7 +157,6 @@ juce::String KnobWithText::getDisplayString() const
         {
             string << "k";
         }
-        
         string<<suffix;
     }
     
@@ -194,6 +193,11 @@ void ResponseCurveComponent::parameterValueChanged(int parameterIndex, float new
 void ResponseCurveComponent::UpdateGraph() {
     
     auto chainSettings = getChainSettings(audioProcessor.apvts);
+    
+    monochain.setBypassed<ChainPositions::LowCut>(chainSettings.lowCutBypassed);
+    monochain.setBypassed<ChainPositions::HighCut>(chainSettings.highCutBypassed);
+    monochain.setBypassed<ChainPositions::Peak>(chainSettings.peakBypassed);
+    
     auto peakCoefficients = MakePeakFilter(chainSettings, audioProcessor.getSampleRate());
     UpdateCoefficients(monochain.get<ChainPositions::Peak>().coefficients, peakCoefficients);
     
@@ -253,39 +257,45 @@ void ResponseCurveComponent::paint (juce::Graphics& g)
         {
             mag *= peak.coefficients->getMagnitudeForFrequency(freq, sampleRate);
         }
-        if(!lowcut.isBypassed<0>())
+        if(!monochain.isBypassed<ChainPositions::LowCut>())
         {
-            mag *= lowcut.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            if(!lowcut.isBypassed<0>())
+            {
+                mag *= lowcut.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!lowcut.isBypassed<1>())
+            {
+                mag *= lowcut.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!lowcut.isBypassed<2>())
+            {
+                mag *= lowcut.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!lowcut.isBypassed<3>())
+            {
+                mag *= lowcut.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
         }
-        if(!lowcut.isBypassed<1>())
+        if(!monochain.isBypassed<ChainPositions::HighCut>())
         {
-            mag *= lowcut.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            if(!highcut.isBypassed<0>())
+            {
+                mag *= highcut.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!highcut.isBypassed<1>())
+            {
+                mag *= highcut.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!highcut.isBypassed<2>())
+            {
+                mag *= highcut.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
+            if(!highcut.isBypassed<3>())
+            {
+                mag *= highcut.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
+            }
         }
-        if(!lowcut.isBypassed<2>())
-        {
-            mag *= lowcut.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-        if(!lowcut.isBypassed<3>())
-        {
-            mag *= lowcut.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-        if(!highcut.isBypassed<0>())
-        {
-            mag *= highcut.get<0>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-        if(!highcut.isBypassed<1>())
-        {
-            mag *= highcut.get<1>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-        if(!highcut.isBypassed<2>())
-        {
-            mag *= highcut.get<2>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-        if(!highcut.isBypassed<3>())
-        {
-            mag *= highcut.get<3>().coefficients->getMagnitudeForFrequency(freq, sampleRate);
-        }
-          
+        
         //convert magnitude to decibels
         magnitudes[i] = Decibels::gainToDecibels(mag);
     }
@@ -349,17 +359,15 @@ void ResponseCurveComponent::resized()
     
     Array<float> gain
     {
-        -12, -6, 0, 6, 12
+        -24, -12, 0, 12, 24
     };
     
     for (auto gDB : gain)
     {
-        auto y = jmap(gDB, -12.f, 12.f, float(bottom), float(top));
+        auto y = jmap(gDB, -24.f, 24.f, float(bottom), float(top));
         g.setColour(gDB == 0.f ? (Colour(0u, 170, 1u)) : Colours::darkgrey);
         g.drawHorizontalLine(y, left, right);
     }
-    
-    //g.drawRect(getAnalysisArea());
     
     g.setColour(Colours::lightgrey);
     const int fontHeight = 10;
@@ -386,6 +394,29 @@ void ResponseCurveComponent::resized()
         r.setCentre(x, 0);
         r.setY(1);
         
+        g.drawFittedText(str, r, juce::Justification::centred, 1);
+    }
+    
+    for (auto gDB : gain)
+    {
+        auto y = jmap(gDB, -24.f, 24.f,float(bottom), float(top));
+        String str;
+        if(gDB > 0) str << "+";
+        str << gDB;
+        auto textWidth = g.getCurrentFont().getStringWidth(str);
+        Rectangle<int> r;
+        r.setSize(textWidth, fontHeight);
+        r.setX(getWidth() - textWidth);
+        r.setCentre(r.getCentreX(), y);
+        g.setColour(gDB == 0.f ? (Colour(0u, 170, 1u)) : Colours::lightgrey);
+        g.drawFittedText(str, r, juce::Justification::centred, 1);
+        
+        str.clear();
+        str << (gDB - 24.f);
+        r.setX(1);
+        textWidth = g.getCurrentFont().getStringWidth(str);
+        r.setSize(textWidth, fontHeight);
+        g.setColour(Colours::lightgrey);
         g.drawFittedText(str, r, juce::Justification::centred, 1);
     }
 }
@@ -430,7 +461,11 @@ peakQualitySliderAttachment(audioProcessor.apvts, "PeakQ", peakQualitySlider),
 lowCutFreqSliderAttachment(audioProcessor.apvts, "LowCutFreq", lowCutFreqSlider),
 lowCutSlopeSliderAttachment(audioProcessor.apvts, "LowCutSlope", lowCutSlopeSlider),
 highCutFreqSliderAttachment(audioProcessor.apvts, "HiCutFreq", highCutFreqSlider),
-highCutSlopeSliderAttachment(audioProcessor.apvts, "HiCutSlope", highCutSlopeSlider)
+highCutSlopeSliderAttachment(audioProcessor.apvts, "HiCutSlope", highCutSlopeSlider),
+
+lowCutBypassButtonAttachment(audioProcessor.apvts, "LowCutBypassed", lowCutBypassButton),
+peakBypassButtonAttachment(audioProcessor.apvts, "PeakBypassed", peakBypassButton),
+highCutBypassButtonAttachment(audioProcessor.apvts, "HighCutBypassed", highCutBypassButton)
 
 {
     // Make sure that before the constructor has finished, you've set the
@@ -491,11 +526,15 @@ void SimpleEQAudioProcessorEditor::resized()
     auto highCutArea = bounds.removeFromRight(bounds.getWidth() * .5f);
     
     //applying bounds to knobs
+    lowCutBypassButton.setBounds(lowCutArea.removeFromTop(25));
     lowCutFreqSlider.setBounds(lowCutArea.removeFromTop(lowCutArea.getHeight() * .66f));
     lowCutSlopeSlider.setBounds(lowCutArea);
+    
+    highCutBypassButton.setBounds(highCutArea.removeFromTop(25));
     highCutFreqSlider.setBounds(highCutArea.removeFromTop(highCutArea.getHeight() * .66f));
     highCutSlopeSlider.setBounds(highCutArea);
     
+    peakBypassButton.setBounds(bounds.removeFromTop(25));
     peakFreqSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * .33f));
     peakGainSlider.setBounds(bounds.removeFromTop(bounds.getHeight() * .5f));
     peakQualitySlider.setBounds(bounds);
@@ -512,6 +551,9 @@ std::vector<juce::Component*> SimpleEQAudioProcessorEditor::GetComps()
         &highCutFreqSlider,
         &highCutSlopeSlider,
         &lowCutSlopeSlider,
-        &responseCurveComponent
+        &responseCurveComponent,
+        &highCutBypassButton,
+        &lowCutBypassButton,
+        &peakBypassButton
     };
 }

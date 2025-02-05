@@ -118,12 +118,20 @@ private:
     
     //now we create the attachments
     Attachment peakFreqSliderAttachment,
-    peakGainSliderAttachment,
-    peakQualitySliderAttachment,
-    lowCutFreqSliderAttachment,
-    lowCutSlopeSliderAttachment,
-    highCutFreqSliderAttachment,
-    highCutSlopeSliderAttachment;
+               peakGainSliderAttachment,
+               peakQualitySliderAttachment,
+               lowCutFreqSliderAttachment,
+               lowCutSlopeSliderAttachment,
+               highCutFreqSliderAttachment,
+               highCutSlopeSliderAttachment;
+    
+    juce::ToggleButton lowCutBypassButton, peakBypassButton, highCutBypassButton;
+    
+    using ButtonAttachment = apvts::ButtonAttachment;
+    
+    ButtonAttachment lowCutBypassButtonAttachment,
+                     peakBypassButtonAttachment,
+                     highCutBypassButtonAttachment;
     
     //making vector to iterate through knobs
     std::vector<juce::Component*> GetComps();

@@ -2,6 +2,12 @@
 
 #include <JuceHeader.h>
 
+enum Channel
+{
+    Right, //0
+    Left   //1
+};
+
 //enum for hi/low pass slope options
 enum Slope{
     Slope_12,
@@ -16,6 +22,7 @@ struct ChainSettings
     float peakFreq {0}, peakGainInDb{0}, peakQuality {.1f};
     float lowCutFreq{0}, highCutFreq{0};
     int lowCutSlope{Slope::Slope_12}, highCutSlope {Slope::Slope_12};
+    bool lowCutBypassed{false}, peakBypassed{false}, highCutBypassed{false};
 };
 
 //now declaring a function to get these values, implemented in .cpp
