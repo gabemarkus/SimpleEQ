@@ -21,6 +21,11 @@ struct LookAndFeel: juce::LookAndFeel_V4
                                    float rotaryStartAngle,
                                    float rotaryEndAngle,
                                    juce::Slider& slider) override;
+    
+    void drawToggleButton (juce::Graphics &g,
+                           juce::ToggleButton &toggleButton,
+                           bool shouldDrawButtonAsHighlighted,
+                           bool shouldDrawButtonAsDown) override;
 };
 
 //creating a struct for creating knobs because they will all be the same
@@ -135,6 +140,7 @@ private:
     
     //making vector to iterate through knobs
     std::vector<juce::Component*> GetComps();
+    LookAndFeel lnf;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SimpleEQAudioProcessorEditor)
 };
